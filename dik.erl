@@ -43,16 +43,34 @@ dijkstra(Nodes, StartNode) ->
 	NewNodes = dict:map(fun(Key, Val) -> {if Key == StartNode -> 0; true -> infinity end, not_visited, Val} end, Nodes),
 	dict:map(fun(_, {Distance, _, _}) -> Distance end, explore_nodes(NewNodes, StartNode, [StartNode])).
 
+
+% Closest node returns the node with the lowest distance from the given list of nodes.
+closest_node(Nodes, Unvisited) ->
+	closest_node(Nodes, Unvisited, none, infinity).
+
+closest_node(_, [], MinNode, _) ->
+	MinNode;
+
+closest_node(Nodes, [CurNode|Unvisited], MinNode, Distance) ->
+	{CurDistance, Visited, _} = dict:fetch(CurNode, Nodes),
+	% Note that any number is < any atom, so 43523452345 < infinity is true.
+	if CurDistance < Distance andalso Visited == not_visited ->
+		closest_node(Nodes, Unvisited, CurNode, CurDistance);
+	   true ->
+	   	closest_node(Nodes, Unvisited, MinNode, Distance)
+	end.
+
 % Explore the given Nodes starting from NodeNum.
-explore_nodes(Nodes, NodeNum, [NextNode|Unvisited]) ->
+explore_nodes(Nodes, NodeNum, Unvisited) ->
 	{NewNodes, NewUnvisited} = explore_node(Nodes, NodeNum, Unvisited),
-	explore_nodes(NewNodes, NextNode, NewUnvisited);
+	NextNode = closest_node(Nodes, NewUnvisited),
+	if NextNode == none ->
+		Nodes;
+	   true ->
+		explore_nodes(NewNodes, NextNode, NewUnvisited)
+	end.
 
-% Base case, no more nodes to explore.
-explore_nodes(Nodes, _, []) ->
-	Nodes.
-
-% A convenience function to extract the node value from the dictionary so we can pattern match on whether it's been visited.
+% Convenience function to fetch node from dictionary so we can pattern match on whether it's been visited.
 explore_node(Nodes, NodeNum, Unvisited) ->
 	explore_node(Nodes, NodeNum, dict:fetch(NodeNum, Nodes), Unvisited).
 
